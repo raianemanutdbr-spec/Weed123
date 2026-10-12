@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>👁️ Monitor de arquivos — ResolveFácil</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --verde:#5ee65e;
+    --amarelo:#ffd75f;
+    --azul:#6f9dff;
+    --cinza:#7b8794;
+    --bg:#0b0f14;
+    --painel:#111823;
+    --painel2:#0d131c;
+    --borda:#1e2a3a;
+    --txt:#d7e2ee;
+  }
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 600px at 15% -10%,#16243a 0%,var(--bg) 62%);
+    color:var(--txt);
+    font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+    font-size:13.5px;
+    line-height:1.55;
+    min-height:100vh;
+  }
+  .topo{
+    border-bottom:1px solid var(--borda);
+    background:rgba(13,19,28,.75);
+    backdrop-filter:blur(6px);
+    position:sticky;top:0;z-index:10;
+  }
+  .topo-inner{
+    max-width:1220px;margin:0 auto;padding:14px 22px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  .topo h1{
+    font-size:15px;margin:0;font-weight:600;letter-spacing:.4px;
+  }
+  .topo h1 span{color:var(--azul)}
+  .dot{
+    width:9px;height:9px;border-radius:50%;background:var(--cinza);
+    box-shadow:0 0 0 0 rgba(94,230,94,.6);
+    transition:background .2s;
+  }
+  .dot.on{
+    background:var(--verde);
+    animation:pulso 1.6s infinite;
+  }
+  @keyframes pulso{
+    0%{box-shadow:0 0 0 0 rgba(94,230,94,.55)}
+    70%{box-shadow:0 0 0 10px rgba(94,230,94,0)}
+    100%{box-shadow:0 0 0 0 rgba(94,230,94,0)}
+  }
+  .status-txt{font-size:12px;color:var(--cinza)}
+  .wrap{
+    max-width:1220px;margin:0 auto;padding:22px;
+    display:grid;grid-template-columns:370px 1fr;gap:18px;
+    align-items:start;
+  }
+  @media (max-width:940px){ .wrap{grid-template-columns:1fr} }
+
+  .card{
+    background:linear-gradient(180deg,var(--painel) 0%,var(--painel2) 100%);
+    border:1px solid var(--borda);
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:16px;
+  }
+  .card h2{
+    font-size:11px;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--cinza);margin:0 0 12px;font-weight:600;
+  }
+  label.campo{
+    display:block;font-size:11px;color:var(--cinza);
+    text-transform:uppercase;letter-spacing:1px;margin:12px 0 5px;
+  }
+  input[type=number],input[type=text]{
+    width:100%;background:#0a0f16;border:1px solid var(--borda);
+    color:var(--txt);border-radius:8px;padding:9px 11px;
+    font-family:inherit;font-size:13px;outline:none;
+  }
+  input:focus{border-color:var(--azul);box-shadow:0 0 0 3px rgba(111,157,255,.12)}
+  .botoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  button{
+    flex:1 1 auto;min-width:120px;
+    background:#16202e;color:var(--txt);
+    border:1px solid var(--borda);border-radius:8px;
+    padding:9px 12px;cursor:pointer;
+    font-family:inherit;font-size:12.5px;font-weight:500;
+    transition:.15s;
+  }
+  button:hover:not(:disabled){background:#1d2b3d;border-color:#2c3f57;transform:translateY(-1px)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primario{background:rgba(94,230,94,.12);border-color:rgba(94,230,94,.4);color:var(--verde)}
+  button.primario:hover:not(:disabled){background:rgba(94,230,94,.2)}
+  button.perigo{background:rgba(255,215,95,.1);border-color:rgba(255,215,95,.35);color:var(--amarelo)}
+  button.azul{background:rgba(111,157,255,.12);border-color:rgba(111,157,255,.4);color:var(--azul)}
+
+  .arquivo{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 11px;border-radius:9px;background:#0a0f16;
+    border:1px solid var(--borda);margin-bottom:8px;
+  }
+  .arquivo .nome{flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .arquivo .meta{font-size:10.5px;color:var(--cinza);display:block;margin-top:2px}
+  .badge{
+    font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;
+    padding:3px 7px;border-radius:20px;border:1px solid;white-space:nowrap;
+  }
+  .b-monitorado{color:var(--verde);border-color:rgba(94,230,94,.35);background:rgba(94,230,94,.08)}
+  .b-mudou{color:var(--azul);border-color:rgba(111,157,255,.4);background:rgba(111,157,255,.1)}
+  .b-perdido{color:var(--amarelo);border-color:rgba(255,215,95,.35);background:rgba(255,215,95,.08)}
+  .vazio{color:var(--cinza);font-size:12px;text-align:center;padding:18px 8px;border:1px dashed var(--borda);border-radius:9px}
+
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{background:#0a0f16;border:1px solid var(--borda);border-radius:9px;padding:10px}
+  .stat b{display:block;font-size:18px;font-weight:600;color:var(--azul)}
+  .stat span{font-size:10px;color:var(--cinza);text-transform:uppercase;letter-spacing:.9px}
+
+  .terminal{
+    background:#070b11;border:1px solid var(--borda);border-radius:12px;
+    overflow:hidden;display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:420px;
+  }
+  .terminal-topo{
+    display:flex;align-items:center;gap:8px;padding:10px 14px;
+    background:#0d131c;border-bottom:1px solid var(--borda);
+  }
+  .bolinhas{display:flex;gap:6px}
+  .bolinhas i{width:10px;height:10px;border-radius:50%;display:block}
+  .bolinhas i:nth-child(1){background:#ff5f57}
+  .bolinhas i:nth-child(2){background:#febc2e}
+  .bolinhas i:nth-child(3){background:#28c840}
+  .terminal-topo .titulo{font-size:11px;color:var(--cinza);letter-spacing:.5px;flex:1}
+  #log{
+    flex:1;overflow-y:auto;padding:14px 16px;
+    font-size:12.8px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
+  }
+  #log .linha{animation:entra .18s ease-out}
+  @keyframes entra{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+  #log::-webkit-scrollbar{width:9px}
+  #log::-webkit-scrollbar-track{background:#070b11}
+  #log::-webkit-scrollbar-thumb{background:#1e2a3a;border-radius:9px}
+  .aviso{
+    font-size:11.5px;color:var(--cinza);border-left:2px solid var(--borda);
+    padding:6px 10px;margin-top:12px;line-height:1.6;
+  }
+  .aviso b{color:var(--amarelo);font-weight:500}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="topo-inner">
+    <span class="dot" id="dot"></span>
+    <h1>👁️ Monitor de arquivos — <span>ResolveFácil</span></h1>
+    <span class="status-txt" id="statusTxt">parado</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ================= PAINEL ESQUERDO ================= -->
+  <aside>
+
+    <div class="card">
+      <h2>Configuração</h2>
+
+      <label class="campo">Arquivos monitorados</label>
+      <div id="listaArquivos">
+        <div class="vazio">Nenhum arquivo selecionado</div>
+      </div>
+
+      <div class="botoes">
+        <button class="azul" id="btnSelecionar">📎 Selecionar arquivos</button>
+      </div>
+
+      <label class="campo">Intervalo (segundos)</label>
+      <input type="number" id="intervalo" value="5" min="1" max="120" />
+
+      <label class="campo">Webhook de publicação (opcional)</label>
+      <input type="text" id="webhook" placeholder="https://... (vazio = simulado)" />
+
+      <div class="botoes">
+        <button class="primario" id="btnIniciar">▶ Iniciar monitor</button>
+        <button class="perigo" id="btnParar" disabled>■ Parar</button>
+      </div>
+      <div class="botoes">
+        <button id="btnVerificar">🔄 Verificar agora</button>
+        <button id="btnLimpar">🧹 Limpar log</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Estatísticas</h2>
+      <div class="stats">
+        <div class="stat"><b id="stArquivos">0</b><span>Arquivos</span></div>
+        <div class="stat"><b id="stPublicacoes">0</b><span>Publicações</span></div>
+        <div class="stat"><b id="stIntervalo">5s</b><span>Intervalo</span></div>
+        <div class="stat"><b id="stUltima">—</b><span>Última</span></div>
+      </div>
+      <div class="aviso">
+        <b>Nota:</b> o navegador não executa o <code>publicar.py</code>. Sem webhook,
+        a publicação é <b>simulada</b>; com webhook, é feito um <code>POST</code> real
+        com os arquivos alterados.
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ================= TERMINAL ================= -->
+  <main>
+    <div class="terminal">
+      <div class="terminal-topo">
+        <div class="bolinhas"><i></i><i></i><i></i></div>
+        <span class="titulo">auto_publicar.js — monitor</span>
+      </div>
+      <div id="log"></div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+/* ============================================================================
+ *  auto_publicar.js
+ *  Versão web do auto_publicar.py — vigia os arquivos e "publica" ao salvar.
+ * ========================================================================== */
+
+/* ------------------------------ CONSTANTES ------------------------------- */
+
+// Arquivos sugeridos (o original usa ARQUIVOS_MONITORADOS)
+const ARQUIVOS_PADRAO = ['01.py', 'publicar.py', 'index.html'];
+
+// Cores equivalentes ao ANSI do original
+const CORES = {
+  verde:   'var(--verde)',
+  amarelo: 'var(--amarelo)',
+  azul:    'var(--azul)',
+  cinza:   'var(--cinza)'
+};
+
+/* ------------------------------- ESTADO ---------------------------------- */
+const estado = {
+  rodando: false,
+  timer: null,
+  arquivos: new Map(),   // nome -> { handle, hash, tamanho, modificado, status }
+  publicacoes: 0,
+  ultimaPublicacao: null
+};
+
+/* --------------------------- FUNÇÕES UTILITÁRIAS -------------------------- */
+
+// Equivalente ao c(texto, cor) do Python
+function c(texto, cor = '') {
+  const corCss = CORES[cor] || 'inherit';
+  return `<span style="color:${corCss}">${escapar(texto)}</span>`;
+}
+
+function escapar(t) {
+  return String(t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function log(html) {
+  const box = document.getElementById('log');
+  const linha = document.createElement('div');
+  linha.className = 'linha';
+  linha.innerHTML = html;
+  box.appendChild(linha);
+  box.scrollTop = box.scrollHeight;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function formatarBytes(n) {
+  if (n == null) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1048576).toFixed(2) + ' MB';
+}
+
+function horaAgora() {
+  return new Date().toLocaleTimeString('pt-BR');
+}
+
+/* ------------------------------ MD5 (JS puro) ----------------------------- */
+/* Equivalente ao hashlib.md5(...).hexdigest() do Python                   */
+
+function md5(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const origLen = bytes.length;
+  const bitLenLo = (origLen * 8) >>> 0;
+  const bitLenHi = Math.floor(origLen * 8 / 4294967296);
+
+  const withOne = origLen + 1;
+  const padLen = ((56 - (withOne % 64)) + 64) % 64;
+  const total = withOne + padLen + 8;
+
+  const msg = new Uint8Array(total);
+  msg.set(bytes);
+  msg[origLen] = 0x80;
+
+  const dv = new DataView(msg.buffer);
+  dv.setUint32(total - 8, bitLenLo, true);
+  dv.setUint32(total - 4, bitLenHi, true);
+
+  const K = new Uint32Array(64);
+  for (let i = 0; i < 64; i++) {
+    K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) >>> 0;
+  }
+
+  const S = [
+    7,12,17,22, 7,12,17,22, 7,12,17,22, 7,12,17,22,
+    5, 9,14,20, 5, 9,14,20, 5, 9,14,20, 5, 9,14,20,
+    4,11,16,23, 4,11,16,23, 4,11,16,23, 4,11,16,23,
+    6,10,15,21, 6,10,15,21, 6,10,15,21, 6,10,15,21
+  ];
+
+  let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+
+  for (let off = 0; off < total; off += 64) {
+    const M = new Uint32Array(16);
+    for (let i = 0; i < 16; i++) M[i] = dv.getUint32(off + i * 4, true);
+
+    let A = a0, B = b0, C = c0, D = d0;
+
+    for (let i = 0; i < 64; i++) {
+      let F, G;
+      if (i < 16)       { F = (B & C) | (~B & D);  G = i; }
+      else if (i < 32)  { F = (D & B) | (~D & C);  G = (5 * i + 1) % 16; }
+      else if (i < 48)  { F = B ^ C ^ D;           G = (3 * i + 5) % 16; }
+      else              { F = C ^ (B | ~D);        G = (7 * i) % 16; }
+
+      F = (F + A + K[i] + M[G]) >>> 0;
+      A = D; D = C; C = B;
+      const rot = (F << S[i]) | (F >>> (32 - S[i]));
+      B = (B + rot) >>> 0;
+    }
+
+    a0 = (a0 + A) >>> 0;
+    b0 = (b0 + B) >>> 0;
+    c0 = (c0 + C) >>> 0;
+    d0 = (d0 + D) >>> 0;
+  }
+
+  const le = w => {
+    const s = (w >>> 0).toString(16).padStart(8, '0');
+    return s.slice(6, 8) + s.slice(4, 6) + s.slice(2, 4) + s.slice(0, 2);
+  };
+  return [a0, b0, c0, d0].map(le).join('');
+}
+
+/* --------------------------- hash_arquivo(caminho) ------------------------ */
+/* Lê o arquivo pelo handle e devolve { hash, tamanho, modificado } | null   */
+
+async function hashArquivo(handle) {
+  if (!handle) return null;
+  try {
+    const file = await handle.getFile();
+    const buf = await file.arrayBuffer();
+    return {
+      hash: md5(buf),
+      tamanho: file.size,
+      modificado: file.lastModified
+    };
+  } catch (e) {
+    return null; // arquivo inexistente / sem permissão
+  }
+}
+
+/* ------------------------- SELEÇÃO DOS ARQUIVOS --------------------------- */
+
+async function selecionarArquivos() {
+  if (!('showOpenFilePicker' in window)) {
+    log(c('⚠️  Seu navegador não suporta a File System Access API.', 'amarelo'));
+    log(c('    Use Chrome ou Edge (desktop) para o monitoramento ao vivo.', 'cinza'));
+    return;
+  }
+
+  try {
+    const handles = await window.showOpenFilePicker({
+      multiple: true,
+      types: [{
+        description: 'Arquivos monitorados',
+        accept: { 'text/plain': ['.py', '.html', '.htm', '.js', '.css', '.txt', '.json'] }
+      }]
+    });
+
+    for (const handle of handles) {
+      const f = await handle.getFile();
+      const info = await hashArquivo(handle);
+
+      estado.arquivos.set(f.name, {
+        handle,
+        hash: info ? info.hash : null,
+        tamanho: info ? info.tamanho : f.size,
+        modificado: info ? info.modificado : f.lastModified,
+        status: info ? 'monitorado' : 'perdido'
+      });
+
+      log(c(`📎 Arquivo adicionado: ${f.name}`, 'azul'));
+      if (info) log(c(`   md5 ${info.hash}  (${formatarBytes(info.tamanho)})`, 'cinza'));
+    }
+
+    atualizarUI();
+  } catch (e) {
+    /* usuário cancelou o diálogo */
+  }
+}
+
+/* --------------------------- publicar() ----------------------------------- */
+/* Equivalente ao subprocess.run([PYTHON, 'publicar.py'])                   */
+
+async function publicar() {
+  log(c('\n🚀 Publicando mudança...', 'verde'));
+
+  const url = document.getElementById('webhook').value.trim();
+  const alterados = [...estado.arquivos.values()]
+    .filter(i => i.status === 'mudou')
+    .map(i => i.nome || '');
+
+  const linhas = [];
+  let erro = null;
+
+  if (url) {
+    // ---- publicação real via webhook ----
+    try {
+      linhas.push(`→ POST ${url}`);
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projeto: 'ResolveFácil',
+          arquivos: alterados,
+          timestamp: new Date().toISOString(),
+          hashes: Object.fromEntries(
+            [...estado.arquivos.entries()].map(([n, i]) => [n, i.hash])
+          )
+        })
+      });
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+      linhas.push(`✅ PUBLICADO — HTTP ${resp.status}`);
+    } catch (e) {
+      erro = String(e && e.message ? e.message : e);
+      linhas.push(`→ POST ${url}`);
+      linhas.push(`❌ Falha na publicação`);
+    }
+  } else {
+    // ---- publicação simulada (espelha a saída do publicar.py) ----
+    const etapas = [
+      ['→ Lendo configuração...',                250],
+      ['→ Validando arquivos alterados...',      300],
+      ['→ Enviando para o servidor...',          550],
+      ['✅ PUBLICADO — commit ' + Math.random().toString(16).slice(2, 9), 220]
+    ];
+
+    for (const [texto, delay] of etapas) {
+      await sleep(delay);
+      linhas.push(texto);
+    }
+  }
+
+  // Filtro idêntico ao do Python: só imprime linhas relevantes
+  const relevantes = ['PUBLICADO', '✅', '❌', '⚠️', '→'];
+  for (const linha of linhas) {
+    if (relevantes.some(p => linha.includes(p))) {
+      const cor = linha.includes('❌') ? 'amarelo'
+                : linha.includes('✅') ? 'verde'
+                : linha.includes('→')  ? 'cinza'
+                : '';
+      log('   ' + c(linha, cor));
+    }
+  }
+
+  if (erro) {
+    log(c('   ❌ Erro na publicação:', 'amarelo'));
+    log(c('   ' + erro.slice(0, 500), 'cinza'));
+  } else {
+    estado.publicacoes++;
+    estado.ultimaPublicacao = new Date();
+    for (const info of estado.arquivos.values()) {
+      if (info.status === 'mudou') info.status = 'monitorado';
+    }
+  }
+
+  atualizarUI();
+}
+
+/* ------------------------------- verificar() ------------------------------ */
+/* O corpo do while True do main()                                          */
+
+async function verificar() {
+  let mudou = false;
+
+  for (const [nome, info] of estado.arquivos) {
+    const novo = await hashArquivo(info.handle);
+
+    if (novo && novo.hash !== info.hash) {
+      const antigo = info.hash;
+      info.hash = novo.hash;
+      info.tamanho = novo.tamanho;
+      info.modificado = novo.modificado;
+      info.status = 'mudou';
+
+      log(c(`\n📝 Mudança detectada: ${nome}`, 'azul'));
+      log(c(`   ${(antigo || '—').slice(0, 12)} → ${novo.hash.slice(0, 12)}`, 'cinza'));
+      mudou = true;
+
+    } else if (!novo && info.hash) {
+      info.status = 'perdido';
+      log(c(`\n⚠️  Arquivo inacessível: ${nome}`, 'amarelo'));
+    }
+  }
+
+  if (mudou) {
+    atualizarUI();
+    await publicar();
+    log(c('\n  👁️  Voltando a monitorar...\n', 'cinza'));
+  } else {
+    atualizarUI();
+  }
+}
+
+/* --------------------------------- main() --------------------------------- */
+
+async function main() {
+  if (estado.arquivos.size === 0) {
+    log(c('⚠️  Selecione pelo menos um arquivo antes de iniciar.', 'amarelo'));
+    return;
+  }
+
+  const intervalo = Math.max(1, Math.min(120,
+    parseInt(document.getElementById('intervalo').value, 10) || 5));
+
+  // Solicita permissão de leitura persistente
+  for (const [nome, info] of estado.arquivos) {
+    try {
+      let perm = await info.handle.queryPermission({ mode: 'read' });
+      if (perm !== 'granted') {
+        perm = await info.handle.requestPermission({ mode: 'read' });
+      }
+      if (perm !== 'granted') {
+        log(c(`⚠️  Sem permissão de leitura para ${nome}`, 'amarelo'));
+      }
+    } catch (e) { /* ignora */ }
+  }
+
+  estado.rodando = true;
+
+  // Cabeçalho — igual ao print() do main()
+  log('='.repeat(62));
+  log(c('  👁️  Monitor de arquivos — ResolveFácil', 'azul'));
+  log('='.repeat(62));
+  log(`  Monitorando: ${[...estado.arquivos.keys()].join(', ')}`);
+  log(`  Intervalo  : ${intervalo}s`);
+  log(`  Python     : (simulado no navegador)`);
+  log(`  Webhook    : ${document.getElementById('webhook').value.trim() || '— (simulado)'}`);
+  log('');
+  log(c('  💡 Salve um arquivo → publica automaticamente', 'cinza'));
+  log(c('  🛑 Clique em "Parar" para encerrar', 'cinza'));
+  log('='.repeat(62));
+  log('');
+  log(c('  ✅ Monitoramento iniciado. Aguardando mudanças...\n', 'verde'));
+
+  estado.timer = setInterval(verificar, intervalo * 1000);
+  atualizarUI();
+}
+
+/* -------------------------------- parar() --------------------------------- */
+
+function parar() {
+  if (estado.timer) clearInterval(estado.timer);
+  estado.timer = null;
+  estado.rodando = false;
+  log(c('\n\n👋 Monitor parado.', 'cinza'));
+  atualizarUI();
+}
+
+/* ------------------------------ INTERFACE --------------------------------- */
+
+function atualizarUI() {
+  // --- lista de arquivos ---
+  const lista = document.getElementById('listaArquivos');
+  lista.innerHTML = '';
+
+  if (estado.arquivos.size === 0) {
+    lista.innerHTML = '<div class="vazio">Nenhum arquivo selecionado</div>';
+  } else {
+    for (const [nome, info] of estado.arquivos) {
+      const div = document.createElement('div');
+      div.className = 'arquivo';
+
+      const classeBadge =
+        info.status === 'mudou'      ? 'b-mudou' :
+        info.status === 'perdido'    ? 'b-perdido' : 'b-monitorado';
+
+      div.innerHTML = `
+        <div class="nome">
+          ${escapar(nome)}
+          <span class="meta">
+            ${info.hash ? 'md5 ' + info.hash.slice(0, 10) + '…' : 'sem hash'}
+            · ${formatarBytes(info.tamanho)}
+          </span>
+        </div>
+        <span class="badge ${classeBadge}">${info.status}</span>
+      `;
+      lista.appendChild(div);
+    }
+  }
+
+  // --- estatísticas ---
+  document.getElementById('stArquivos').textContent = estado.arquivos.size;
+  document.getElementById('stPublicacoes').textContent = estado.publicacoes;
+  document.getElementById('stIntervalo').textContent =
+    (document.getElementById('intervalo').value || 5) + 's';
+  document.getElementById('stUltima').textContent =
+    estado.ultimaPublicacao
+      ? estado.ultimaPublicacao.toLocaleTimeString('pt-BR').slice(0, 5)
+      : '—';
+
+  // --- status do topo ---
+  document.getElementById('dot').classList.toggle('on', estado.rodando);
+  document.getElementById('statusTxt').textContent = estado.rodando
+    ? `monitorando ${estado.arquivos.size} arquivo(s)`
+    : 'parado';
+
+  // --- botões ---
+  document.getElementById('btnIniciar').disabled   = estado.rodando;
+  document.getElementById('btnParar').disabled     = !estado.rodando;
+  document.getElementById('btnSelecionar').disabled = estado.rodando;
+  document.getElementById('btnVerificar').disabled  = estado.arquivos.size === 0;
+}
+
+/* ------------------------------- EVENTOS ---------------------------------- */
+
+document.getElementById('btnSelecionar').addEventListener('click', selecionarArquivos);
+document.getElementById('btnIniciar').addEventListener('click', main);
+document.getElementById('btnParar').addEventListener('click', parar);
+document.getElementById('btnVerificar').addEventListener('click', async () => {
+  log(c('🔄 Verificação manual...', 'cinza'));
+  await verificar();
+});
+document.getElementById('btnLimpar').addEventListener('click', () => {
+  document.getElementById('log').innerHTML = '';
+});
+document.getElementById('intervalo').addEventListener('input', atualizarUI);
+
+/* ------------------------------ BOOT -------------------------------------- */
+
+(function boot() {
+  log(c('  👁️  Monitor de arquivos — ResolveFácil', 'azul'));
+  log('');
+  log(c('  1) Clique em "Selecionar arquivos" e escolha 01.py, publicar.py, index.html', 'cinza'));
+  log(c('  2) Ajuste o intervalo (padrão 5s)', 'cinza'));
+  log(c('  3) Clique em "Iniciar monitor"', 'cinza'));
+  log('');
+  log(c('  ⚠️  Requer Chrome/Edge (File System Access API).', 'amarelo'));
+  log('');
+  atualizarUI();
+})();
+</script>
+</body>
+</html>

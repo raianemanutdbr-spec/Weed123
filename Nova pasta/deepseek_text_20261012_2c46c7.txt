@@ -1,0 +1,2 @@
+.wrap{max-width:1200px;margin:0 auto;padding:22px;display:grid;grid-template-columns:360px 1fr;gap:18px}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}}

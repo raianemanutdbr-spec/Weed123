@@ -1,0 +1,4 @@
+['→ Verificando repositório...', 250]
+['→ Arquivos alterados: 01.py', 200]
+['→ Enviando para o servidor...', 600]
+['✅ PUBLICADO — commit abc1234', 200]

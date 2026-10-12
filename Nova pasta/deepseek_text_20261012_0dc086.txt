@@ -1,0 +1,5 @@
+<header> 👁️ Monitor de arquivos — ResolveFácil </header>
+<main>
+  <aside/panel: config + file list>
+  <section: log terminal>
+</main>
